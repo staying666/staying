@@ -1,193 +1,81 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Just / Staying PFP Vaults</title>
-<style>
-  body {
-    margin: 0;
-    font-family: Arial, sans-serif;
-    background: black;
-    color: white;
-    overflow-x: hidden;
-  }
-
-  h1 {
-    text-align: center;
-    margin: 20px 0;
-    color: white;
-    text-shadow: 0 0 10px #00f;
-  }
-
-  /* buton create vault */
-  #createVaultBtn {
-    display: block;
-    margin: 0 auto 20px auto;
-    padding: 12px 25px;
-    font-size: 18px;
-    border-radius: 10px;
-    border: none;
-    background-color: #00f;
-    color: white;
-    cursor: pointer;
-  }
-
-  #createVaultBtn:hover {
-    background-color: #0055ff;
-  }
-
-  /* sparkles */
-  @keyframes sparkle {
-    0% {transform: translateY(0) translateX(0);}
-    50% {transform: translateY(50px) translateX(50px);}
-    100% {transform: translateY(0) translateX(0);}
-  }
-  .sparkle {
-    position: absolute;
-    width: 3px;
-    height: 3px;
-    background: white;
-    border-radius: 50%;
-    animation: sparkle 3s infinite;
-    opacity: 0.7;
-  }
-
-  .vaults-container, .images-container {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 20px;
-    margin: 20px;
-  }
-
-  .vault {
-    width: 200px;
-    height: 140px;
-    background: #111;
-    border: 2px solid #00f;
-    border-radius: 15px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    position: relative;
-  }
-
-  .vault button {
-    margin-top: 5px;
-    padding: 5px 10px;
-    cursor: pointer;
-    border: none;
-    border-radius: 5px;
-    background: #00f;
-    color: white;
-  }
-
-  .images-container img {
-    width: 100px;
-    height: 100px;
-    border-radius: 10px;
-    object-fit: cover;
-    border: 2px solid #00f;
-  }
-
-  body::after {
-    content: "";
-    position: fixed;
-    top:0; left:0; width:100%; height:100%;
-    background: linear-gradient(to bottom, rgba(0,0,255,0.1), transparent);
-    pointer-events: none;
-  }
-
-</style>
+  <title>PFP Vaults</title>
 </head>
-<body>
+<body style="background:black; color:white; font-family:sans-serif;">
 
-<h1>Just / Staying PFP Vaults</h1>
-<button id="createVaultBtn" onclick="createVault()">Create Vault</button>
+  <h1>PFP Vaults</h1>
 
-<div class="vaults-container" id="vaults"></div>
-<div class="images-container" id="images"></div>
+  <!-- Input to create vault -->
+  <input type="text" id="vaultName" placeholder="Enter vault name">
+  <button onclick="createVault()">Create Vault</button>
 
-<script>
-// 🔹 Vaults stocate în localStorage
-let vaults = JSON.parse(localStorage.getItem('vaults')) || {};
+  <!-- Vaults will appear here -->
+  <div id="vaults" style="margin-top:20px;"></div>
 
-function saveVaults() {
-  localStorage.setItem('vaults', JSON.stringify(vaults));
-}
 
-function createVault() {
-  const name = prompt("Enter vault name:");
-  if (!name) return alert("Name cannot be empty!");
-  if (vaults[name]) return alert("Vault already exists!");
-  vaults[name] = [];
-  saveVaults();
-  renderVaults();
-}
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getFirestore, collection, addDoc, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-function renderVaults() {
-  const container = document.getElementById('vaults');
-  container.innerHTML = '';
-  document.getElementById('images').innerHTML = '';
-  for (let name in vaults) {
-    const vaultDiv = document.createElement('div');
-    vaultDiv.className = 'vault';
-    vaultDiv.innerHTML = `
-      <div style="font-weight:bold">${name}</div>
-      <div style="font-size:14px">${vaults[name].length} images</div>
-      <button onclick="uploadImages('${name}',event)">Upload</button>
-      <button onclick="viewVault('${name}',event)">View Vault</button>
-    `;
-    container.appendChild(vaultDiv);
-  }
-}
+    // 🔥 REPLACE THIS WITH YOUR FIREBASE CONFIG
+    const firebaseConfig = {
+      apiKey: "PASTE_HERE",
+      authDomain: "PASTE_HERE",
+      projectId: "PASTE_HERE",
+      storageBucket: "PASTE_HERE",
+      messagingSenderId: "PASTE_HERE",
+      appId: "PASTE_HERE"
+    };
 
-function uploadImages(vaultName, e) {
-  e.stopPropagation(); // nu deschide vault-ul
-  const input = document.createElement('input');
-  input.type = 'file';
-  input.multiple = true;
-  input.onchange = (event)=>{
-    for (let file of event.target.files) {
-      const reader = new FileReader();
-      reader.onload = e => {
-        vaults[vaultName].push(e.target.result);
-        saveVaults();
-      };
-      reader.readAsDataURL(file);
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    // Create vault
+    window.createVault = async function () {
+      const nameInput = document.getElementById("vaultName");
+      const name = nameInput.value.trim();
+
+      if (!name) {
+        alert("Enter vault name");
+        return;
+      }
+
+      await addDoc(collection(db, "vaults"), {
+        name: name,
+        createdAt: Date.now()
+      });
+
+      nameInput.value = "";
+      loadVaults();
+    };
+
+    // Load vaults
+    async function loadVaults() {
+      const container = document.getElementById("vaults");
+      container.innerHTML = "";
+
+      const q = query(collection(db, "vaults"), orderBy("createdAt", "desc"));
+      const snapshot = await getDocs(q);
+
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+
+        const div = document.createElement("div");
+        div.style.padding = "10px";
+        div.style.margin = "10px 0";
+        div.style.background = "#111";
+        div.style.border = "1px solid blue";
+
+        div.innerText = data.name;
+
+        container.appendChild(div);
+      });
     }
-    setTimeout(()=>viewVault(vaultName), 200);
-  };
-  input.click();
-}
 
-function viewVault(vaultName, e) {
-  if(e) e.stopPropagation();
-  const imagesDiv = document.getElementById('images');
-  imagesDiv.innerHTML = '';
-  vaults[vaultName].forEach(src=>{
-    const img = document.createElement('img');
-    img.src = src;
-    imagesDiv.appendChild(img);
-  });
-}
+    loadVaults();
+  </script>
 
-// Initial render
-renderVaults();
-
-// sparkles dinamice
-for(let i=0;i<50;i++){
-  const s=document.createElement('div');
-  s.className='sparkle';
-  s.style.top=Math.random()*100+'%';
-  s.style.left=Math.random()*100+'%';
-  s.style.width=(Math.random()*3+2)+'px';
-  s.style.height=s.style.width;
-  s.style.animationDuration=(Math.random()*3+2)+'s';
-  document.body.appendChild(s);
-}
-</script>
 </body>
 </html>
