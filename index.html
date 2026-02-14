@@ -3,15 +3,21 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Just / Staying PFP's</title>
+<title>Just / Staying PFP Vaults</title>
 <style>
-  /* 🌌 Fundal și sparkles */
   body {
     margin: 0;
     font-family: Arial, sans-serif;
     background: black;
     color: white;
     overflow-x: hidden;
+  }
+
+  h1 {
+    text-align: center;
+    margin: 20px 0;
+    color: white;
+    text-shadow: 0 0 10px #00f;
   }
 
   /* sparkles */
@@ -30,26 +36,17 @@
     opacity: 0.7;
   }
 
-  /* titlu */
-  h1 {
-    text-align: center;
-    margin: 20px 0;
-    color: white;
-    text-shadow: 0 0 10px #00f;
-  }
-
-  /* container categorii */
-  .categories {
+  .vaults-container, .images-container {
     display: flex;
-    justify-content: center;
     flex-wrap: wrap;
+    justify-content: center;
     gap: 20px;
     margin: 20px;
   }
 
-  .category {
+  .vault {
     width: 180px;
-    height: 180px;
+    height: 120px;
     background: #111;
     border: 2px solid #00f;
     border-radius: 15px;
@@ -57,31 +54,18 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    position: relative;
     cursor: pointer;
-    transition: transform 0.2s;
-  }
-  .category:hover {
-    transform: scale(1.05);
+    position: relative;
   }
 
-  .category button {
-    margin-top: 10px;
+  .vault button {
+    margin-top: 5px;
     padding: 5px 10px;
     cursor: pointer;
     border: none;
     border-radius: 5px;
     background: #00f;
     color: white;
-  }
-
-  /* container imagini */
-  .images-container {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 15px;
-    margin: 20px;
   }
 
   .images-container img {
@@ -92,7 +76,6 @@
     border: 2px solid #00f;
   }
 
-  /* fade albastru la scroll */
   body::after {
     content: "";
     position: fixed;
@@ -100,87 +83,68 @@
     background: linear-gradient(to bottom, rgba(0,0,255,0.1), transparent);
     pointer-events: none;
   }
+
 </style>
 </head>
 <body>
 
-<h1>Just / Staying PFP's</h1>
+<h1>Just / Staying PFP Vaults</h1>
+<button onclick="createVault()">Create Vault</button>
 
-<div class="categories">
-  <div class="category" data-cat="boy">
-    <div>PFP Boys</div>
-    <div id="count-boy">0</div>
-    <input type="file" id="upload-boy" style="display:none" multiple>
-    <button onclick="document.getElementById('upload-boy').click()">Upload</button>
-  </div>
-  <div class="category" data-cat="girl">
-    <div>PFP Girls</div>
-    <div id="count-girl">0</div>
-    <input type="file" id="upload-girl" style="display:none" multiple>
-    <button onclick="document.getElementById('upload-girl').click()">Upload</button>
-  </div>
-  <div class="category" data-cat="anime">
-    <div>Anime</div>
-    <div id="count-anime">0</div>
-    <input type="file" id="upload-anime" style="display:none" multiple>
-    <button onclick="document.getElementById('upload-anime').click()">Upload</button>
-  </div>
-  <div class="category" data-cat="total">
-    <div>Total PFP</div>
-    <div id="count-total">0</div>
-  </div>
-</div>
-
+<div class="vaults-container" id="vaults"></div>
 <div class="images-container" id="images"></div>
 
 <script>
-const categories = {
-  boy: [],
-  girl: [],
-  anime: []
-};
+let vaults = {};
 
-function updateCounters() {
-  document.getElementById('count-boy').innerText = categories.boy.length;
-  document.getElementById('count-girl').innerText = categories.girl.length;
-  document.getElementById('count-anime').innerText = categories.anime.length;
-  document.getElementById('count-total').innerText = categories.boy.length + categories.girl.length + categories.anime.length;
+function createVault() {
+  const name = prompt("Enter vault name:");
+  if (!name || vaults[name]) return alert("Invalid name or vault already exists!");
+  vaults[name] = [];
+  renderVaults();
 }
 
-function handleUpload(cat, files) {
-  for (let file of files) {
-    const reader = new FileReader();
-    reader.onload = e => {
-      categories[cat].push(e.target.result);
-      updateCounters();
-    };
-    reader.readAsDataURL(file);
+function renderVaults() {
+  const container = document.getElementById('vaults');
+  container.innerHTML = '';
+  document.getElementById('images').innerHTML = '';
+  for (let name in vaults) {
+    const vaultDiv = document.createElement('div');
+    vaultDiv.className = 'vault';
+    vaultDiv.innerHTML = `<div>${name}</div>
+                          <button onclick="uploadImages('${name}',event)">Upload</button>`;
+    vaultDiv.addEventListener('click', ()=> showVault(name));
+    container.appendChild(vaultDiv);
   }
 }
 
-document.getElementById('upload-boy').addEventListener('change', (e)=> handleUpload('boy', e.target.files));
-document.getElementById('upload-girl').addEventListener('change', (e)=> handleUpload('girl', e.target.files));
-document.getElementById('upload-anime').addEventListener('change', (e)=> handleUpload('anime', e.target.files));
-
-const categoryDivs = document.querySelectorAll('.category[data-cat]');
-categoryDivs.forEach(div => {
-  div.addEventListener('click', ()=>{
-    const cat = div.getAttribute('data-cat');
-    const imagesDiv = document.getElementById('images');
-    imagesDiv.innerHTML = '';
-    let imgs = [];
-    if (cat === 'total') {
-      imgs = [...categories.boy, ...categories.girl, ...categories.anime];
-    } else {
-      imgs = categories[cat];
+function uploadImages(vaultName, e) {
+  e.stopPropagation(); // nu deschide vault-ul când dai click pe button
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.multiple = true;
+  input.onchange = (event)=>{
+    for (let file of event.target.files) {
+      const reader = new FileReader();
+      reader.onload = e => {
+        vaults[vaultName].push(e.target.result);
+      };
+      reader.readAsDataURL(file);
     }
-    imgs.forEach(src=>{
-      const img = document.createElement('img');
-      img.src = src;
-      imagesDiv.appendChild(img);
-    });
+    setTimeout(()=>showVault(vaultName), 200); // refresh
+  };
+  input.click();
+}
+
+function showVault(vaultName) {
+  const imagesDiv = document.getElementById('images');
+  imagesDiv.innerHTML = '';
+  vaults[vaultName].forEach(src=>{
+    const img = document.createElement('img');
+    img.src = src;
+    imagesDiv.appendChild(img);
   });
-});
+}
 
 // sparkles dinamice
 for(let i=0;i<50;i++){
@@ -194,6 +158,5 @@ for(let i=0;i<50;i++){
   document.body.appendChild(s);
 }
 </script>
-
 </body>
 </html>
