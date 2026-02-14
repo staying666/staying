@@ -20,6 +20,23 @@
     text-shadow: 0 0 10px #00f;
   }
 
+  /* buton create vault */
+  #createVaultBtn {
+    display: block;
+    margin: 0 auto 20px auto;
+    padding: 12px 25px;
+    font-size: 18px;
+    border-radius: 10px;
+    border: none;
+    background-color: #00f;
+    color: white;
+    cursor: pointer;
+  }
+
+  #createVaultBtn:hover {
+    background-color: #0055ff;
+  }
+
   /* sparkles */
   @keyframes sparkle {
     0% {transform: translateY(0) translateX(0);}
@@ -45,8 +62,8 @@
   }
 
   .vault {
-    width: 180px;
-    height: 120px;
+    width: 200px;
+    height: 140px;
     background: #111;
     border: 2px solid #00f;
     border-radius: 15px;
@@ -54,7 +71,6 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    cursor: pointer;
     position: relative;
   }
 
@@ -89,18 +105,25 @@
 <body>
 
 <h1>Just / Staying PFP Vaults</h1>
-<button onclick="createVault()">Create Vault</button>
+<button id="createVaultBtn" onclick="createVault()">Create Vault</button>
 
 <div class="vaults-container" id="vaults"></div>
 <div class="images-container" id="images"></div>
 
 <script>
-let vaults = {};
+// 🔹 Vaults stocate în localStorage
+let vaults = JSON.parse(localStorage.getItem('vaults')) || {};
+
+function saveVaults() {
+  localStorage.setItem('vaults', JSON.stringify(vaults));
+}
 
 function createVault() {
   const name = prompt("Enter vault name:");
-  if (!name || vaults[name]) return alert("Invalid name or vault already exists!");
+  if (!name) return alert("Name cannot be empty!");
+  if (vaults[name]) return alert("Vault already exists!");
   vaults[name] = [];
+  saveVaults();
   renderVaults();
 }
 
@@ -111,15 +134,18 @@ function renderVaults() {
   for (let name in vaults) {
     const vaultDiv = document.createElement('div');
     vaultDiv.className = 'vault';
-    vaultDiv.innerHTML = `<div>${name}</div>
-                          <button onclick="uploadImages('${name}',event)">Upload</button>`;
-    vaultDiv.addEventListener('click', ()=> showVault(name));
+    vaultDiv.innerHTML = `
+      <div style="font-weight:bold">${name}</div>
+      <div style="font-size:14px">${vaults[name].length} images</div>
+      <button onclick="uploadImages('${name}',event)">Upload</button>
+      <button onclick="viewVault('${name}',event)">View Vault</button>
+    `;
     container.appendChild(vaultDiv);
   }
 }
 
 function uploadImages(vaultName, e) {
-  e.stopPropagation(); // nu deschide vault-ul când dai click pe button
+  e.stopPropagation(); // nu deschide vault-ul
   const input = document.createElement('input');
   input.type = 'file';
   input.multiple = true;
@@ -128,15 +154,17 @@ function uploadImages(vaultName, e) {
       const reader = new FileReader();
       reader.onload = e => {
         vaults[vaultName].push(e.target.result);
+        saveVaults();
       };
       reader.readAsDataURL(file);
     }
-    setTimeout(()=>showVault(vaultName), 200); // refresh
+    setTimeout(()=>viewVault(vaultName), 200);
   };
   input.click();
 }
 
-function showVault(vaultName) {
+function viewVault(vaultName, e) {
+  if(e) e.stopPropagation();
   const imagesDiv = document.getElementById('images');
   imagesDiv.innerHTML = '';
   vaults[vaultName].forEach(src=>{
@@ -145,6 +173,9 @@ function showVault(vaultName) {
     imagesDiv.appendChild(img);
   });
 }
+
+// Initial render
+renderVaults();
 
 // sparkles dinamice
 for(let i=0;i<50;i++){
